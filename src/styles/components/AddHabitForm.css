@@ -47,6 +47,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  
 }
 
 .form-group {
@@ -76,3 +77,68 @@
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
 }
+/* Backdrop */
+.habit-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+ 
+}
+
+/* Modal panel */
+.habit-modal {
+  width: min(640px, 92vw);
+  background-color: var(--bg-secondary);
+  border-radius: 16px;
+  box-shadow: 0 10px 35px rgba(0,0,0,0.2);
+  padding: 1rem 1rem 1.25rem;
+  animation: habitModalIn 120ms ease-out;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+/* Header */
+.habit-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .75rem;
+}
+
+.habit-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Actions */
+.habit-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+/* Simple keyframe */
+@keyframes habitModalIn {
+  from { transform: translateY(6px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Optional: radios row */
+.radio-group {
+  display: flex;
+  align-items: center;
+}
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
