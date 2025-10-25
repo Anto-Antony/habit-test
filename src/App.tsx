@@ -40,11 +40,13 @@ function App() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-  // Load habits (fallback to mocks if none saved)
+  // Load habits (fallback to mocks if none saved) via API
   useEffect(() => {
-    const savedHabits = loadHabitsFromStorage();
-    setHabits(savedHabits.length ? savedHabits : MOCK_HABITS);
-    setHabitsLoaded(true);
+    (async () => {
+      const savedHabits = await loadHabitsFromStorage();
+      setHabits(savedHabits.length ? savedHabits : MOCK_HABITS);
+      setHabitsLoaded(true);
+    })();
   }, []);
 
   // Load theme
@@ -54,10 +56,12 @@ function App() {
     setThemeLoaded(true);
   }, []);
 
-  // Persist habits
+  // Persist habits (using API, with localStorage fallback)
   useEffect(() => {
     if (habitsLoaded) {
-      saveHabitsToStorage(habits);
+      (async () => {
+        await saveHabitsToStorage(habits);
+      })();
     }
   }, [habits, habitsLoaded]);
 
