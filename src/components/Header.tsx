@@ -21,7 +21,7 @@ function Header({
     <header className="header">
       <div className="header-content">
         <div className="header-left">
-          <h1 className="app-title">Habit Tracker</h1>
+          <h1 className="app-title">Habit Hero</h1>
           <div className="header-stats">
             <span className="stat">
               {completedHabits}/{totalHabits} habits completed this week

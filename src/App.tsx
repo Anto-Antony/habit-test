@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/App.tsx
+import { useState, useEffect } from 'react';
 import type {
   Habit,
   HabitFormData,
@@ -25,6 +26,9 @@ import './App.css';
 import './styles/components/Button.css';
 import './styles/components/Modal.css';
 
+// ✅ Correct relative path (App.tsx is in src/, mock/ is also in src/)
+import { MOCK_HABITS } from './mock/habits';
+
 function App() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitsLoaded, setHabitsLoaded] = useState(false);
@@ -32,45 +36,51 @@ function App() {
   const [sortBy, setSortBy] = useState<SortType>('created');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [theme, setTheme] = useState<Theme>('light');
-  const [themeLoaded, setThemeLoaded] = useState(false); // Nuevo estado
+  const [themeLoaded, setThemeLoaded] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
-    null
-  );
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
+  // Load habits (fallback to mocks if none saved)
   useEffect(() => {
     const savedHabits = loadHabitsFromStorage();
-    setHabits(savedHabits);
+    setHabits(savedHabits.length ? savedHabits : MOCK_HABITS);
     setHabitsLoaded(true);
   }, []);
 
+  // Load theme
   useEffect(() => {
     const savedTheme = loadThemeFromStorage();
     setTheme(savedTheme);
     setThemeLoaded(true);
   }, []);
 
+  // Persist habits
   useEffect(() => {
     if (habitsLoaded) {
       saveHabitsToStorage(habits);
     }
   }, [habits, habitsLoaded]);
 
+  // Apply + persist theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-
-    if (themeLoaded) {
-      saveThemeToStorage(theme);
-    }
+    if (themeLoaded) saveThemeToStorage(theme);
   }, [theme, themeLoaded]);
 
+  // ✅ Add with new form fields
   const addHabit = (habitData: HabitFormData): void => {
     const newHabit: Habit = {
       id: generateId(),
       name: habitData.name,
       color: habitData.color,
+      frequency: habitData.frequency,   // NEW
+      category: habitData.category,     // NEW
+      startDate: habitData.startDate,   // NEW
       completedDays: createEmptyHabitDays(),
       createdAt: new Date().toISOString(),
+      // optional mock stats defaults so UI has numbers
+      totalDays: 0,
+      failureDays: 0,
     };
     setHabits(prev => [...prev, newHabit]);
   };
@@ -122,12 +132,8 @@ function App() {
 
   const filteredAndSortedHabits = habits
     .filter(habit => {
-      const matchesSearch = habit.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const completedDaysCount = Object.values(habit.completedDays).filter(
-        Boolean
-      ).length;
+      const matchesSearch = habit.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const completedDaysCount = Object.values(habit.completedDays).filter(Boolean).length;
 
       switch (filter) {
         case 'completed':
@@ -146,9 +152,7 @@ function App() {
           return calculateStreak(b) - calculateStreak(a);
         case 'created':
         default:
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
     });
 
@@ -198,21 +202,12 @@ function App() {
         <div className="modal-overlay">
           <div className="delete-confirm-modal">
             <h3>Delete Habit</h3>
-            <p>
-              Are you sure you want to delete this habit? This action cannot be
-              undone.
-            </p>
+            <p>Are you sure you want to delete this habit? This action cannot be undone.</p>
             <div className="modal-actions">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowDeleteConfirm(null)}
-              >
+              <button className="btn btn-secondary" onClick={() => setShowDeleteConfirm(null)}>
                 Cancel
               </button>
-              <button
-                className="btn btn-danger"
-                onClick={() => deleteHabit(showDeleteConfirm)}
-              >
+              <button className="btn btn-danger" onClick={() => deleteHabit(showDeleteConfirm)}>
                 Delete
               </button>
             </div>

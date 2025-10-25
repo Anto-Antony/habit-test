@@ -10,6 +10,7 @@ import '../styles/components/Button.css';
 const CATEGORIES = ['Health', 'Fitness', 'Study', 'Work', 'Personal'] as const;
 type Frequency = 'daily' | 'weekly';
 
+
 interface AddHabitFormProps {
   onAddHabit: (habitData: HabitFormData) => void;
 }
@@ -202,7 +203,7 @@ function AddHabitForm({ onAddHabit }: AddHabitFormProps) {
   return (
     <div className="add-habit-section">
       <div className="add-habit-header">
-        <h2>Habits</h2>
+        <h2>Add your habit</h2>
         <button
           className="btn btn-primary"
           onClick={() => setIsOpen(true)}

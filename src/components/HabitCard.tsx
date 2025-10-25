@@ -1,9 +1,6 @@
-import React, { useState } from 'react';
-import type { Habit } from '../types/Habit';
-import type { DayOfWeek } from '../types/Habit';
+import { useState } from 'react';
+import type { Habit, DayOfWeek } from '../types/Habit';
 import {
-  DAYS_OF_WEEK,
-  DAYS_DISPLAY_NAMES,
   getCompletedDaysCount,
   getCompletionPercentage,
   isHabitCompleted,
@@ -12,6 +9,7 @@ import {
 import ProgressBar from './ProgressBar';
 import '../styles/components/HabitCard.css';
 import '../styles/components/Button.css';
+
 
 interface HabitCardProps {
   habit: Habit;
@@ -27,6 +25,8 @@ function HabitCard({ habit, onToggleDay, onEdit, onDelete }: HabitCardProps) {
   const completionPercentage = getCompletionPercentage(habit);
   const isCompleted = isHabitCompleted(habit);
   const streak = calculateStreak(habit);
+const failures = habit.failureDays ?? 0;
+const total = habit.totalDays ?? 0;
 
   return (
     <div
@@ -41,12 +41,20 @@ function HabitCard({ habit, onToggleDay, onEdit, onDelete }: HabitCardProps) {
             {habit.name}
             {isCompleted && <span className="completion-badge">✓</span>}
           </h3>
+          
           <div className="habit-stats">
-            <span className="completion-text">{completedDaysCount}/7 days</span>
-            {streak > 0 && (
-              <span className="streak-badge">{streak} day streak</span>
-            )}
-          </div>
+  <span className="completion-text">{completedDaysCount}/7 days</span>
+
+  {/* NEW: failures/total */}
+  <span className="failure-text">
+    {failures}/{total} failed
+  </span>
+
+  {streak > 0 && (
+    <span className="streak-badge">{streak} day streak</span>
+  )}
+</div>
+
         </div>
 
         <div className="habit-actions">
@@ -71,24 +79,18 @@ function HabitCard({ habit, onToggleDay, onEdit, onDelete }: HabitCardProps) {
         <ProgressBar percentage={completionPercentage} color={habit.color} />
       </div>
 
-      <div className="days-container">
-        <div className="days-grid">
-          {DAYS_OF_WEEK.map(day => (
-            <div key={day} className="day-item">
-              <label className="day-label">{DAYS_DISPLAY_NAMES[day]}</label>
-              <button
-                className={`day-checkbox ${habit.completedDays[day] ? 'checked' : ''}`}
-                onClick={() => onToggleDay(habit.id, day)}
-                aria-label={`Mark ${DAYS_DISPLAY_NAMES[day]} as ${habit.completedDays[day] ? 'incomplete' : 'complete'}`}
-              >
-                {habit.completedDays[day] && (
-                  <span className="checkmark">✓</span>
-                )}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+     {/* Single daily checkbox */}
+<div className="daily-check-container">
+  <label className="day-label">Done Today:</label>
+  <button
+    className={`day-checkbox ${habit.completedDays['monday'] ? 'checked' : ''}`}
+    onClick={() => onToggleDay(habit.id, 'monday')}
+    aria-label={`Mark as ${habit.completedDays['monday'] ? 'incomplete' : 'complete'}`}
+  >
+    {habit.completedDays['monday'] && <span className="checkmark">✓</span>}
+  </button>
+</div>
+
     </div>
   );
 }
