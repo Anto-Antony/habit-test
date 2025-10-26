@@ -1,9 +1,8 @@
-import React from 'react';
 import '../styles/components/ProgressBar.css';
 
 interface ProgressBarProps {
   percentage: number;
-  color: string;
+  color?: string;
 }
 
 function ProgressBar({ percentage, color }: ProgressBarProps) {
@@ -14,7 +13,7 @@ function ProgressBar({ percentage, color }: ProgressBarProps) {
           className="progress-bar-fill"
           style={{
             width: `${percentage}%`,
-            backgroundColor: color,
+            backgroundColor: color ?? 'var(--primary-color)',
           }}
         />
       </div>

@@ -15,6 +15,10 @@ import {
   loadHabitsFromStorage,
   createEmptyHabitDays,
   calculateStreak,
+  fetchHabitsFromAPI,
+  createHabitAPI,
+  updateHabitAPI,
+  deleteHabitAPI,
 } from './utils/habitUtils';
 import { saveThemeToStorage, loadThemeFromStorage } from './utils/themeUtils';
 import Header from './components/Header';
@@ -40,23 +44,30 @@ function App() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-  // Load habits (fallback to mocks if none saved) via API
+  // Load habits (tries API first then localStorage then mock)
   useEffect(() => {
     (async () => {
-      const savedHabits = await loadHabitsFromStorage();
-      setHabits(savedHabits.length ? savedHabits : MOCK_HABITS);
+      const apiHabits = await fetchHabitsFromAPI();
+      if (apiHabits && apiHabits.length) {
+        setHabits(apiHabits as Habit[]);
+      } else {
+        const savedHabits = await loadHabitsFromStorage();
+        setHabits(savedHabits.length ? savedHabits : MOCK_HABITS);
+      }
       setHabitsLoaded(true);
     })();
   }, []);
 
   // Load theme
   useEffect(() => {
-    const savedTheme = loadThemeFromStorage();
-    setTheme(savedTheme);
-    setThemeLoaded(true);
+    (async () => {
+      const savedTheme = await loadThemeFromStorage();
+      setTheme(savedTheme);
+      setThemeLoaded(true);
+    })();
   }, []);
 
-  // Persist habits (using API, with localStorage fallback)
+  // Persist habits (local + API sync handled inside saveHabitsToStorage)
   useEffect(() => {
     if (habitsLoaded) {
       (async () => {
@@ -68,44 +79,56 @@ function App() {
   // Apply + persist theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    if (themeLoaded) saveThemeToStorage(theme);
+    if (themeLoaded) {
+      (async () => {
+        await saveThemeToStorage(theme);
+      })();
+    }
   }, [theme, themeLoaded]);
 
   // ✅ Add with new form fields
-  const addHabit = (habitData: HabitFormData): void => {
+  const addHabit = async (habitData: HabitFormData): Promise<void> => {
     const newHabit: Habit = {
       id: generateId(),
       name: habitData.name,
-      color: habitData.color,
-      frequency: habitData.frequency,   // NEW
-      category: habitData.category,     // NEW
-      startDate: habitData.startDate,   // NEW
+      frequency: habitData.frequency,
+      category: habitData.category,
+      startDate: habitData.startDate,
       completedDays: createEmptyHabitDays(),
       createdAt: new Date().toISOString(),
-      // optional mock stats defaults so UI has numbers
       totalDays: 0,
       failureDays: 0,
     };
-    setHabits(prev => [...prev, newHabit]);
+
+    // Try to create on API; if success, use returned value
+    const created = await createHabitAPI(newHabit as any);
+    if (created) {
+      setHabits(prev => [...prev, created as Habit]);
+    } else {
+      setHabits(prev => [...prev, newHabit]);
+    }
   };
 
-  const updateHabit = (editData: EditHabitData): void => {
+  const updateHabit = async (editData: EditHabitData): Promise<void> => {
     setHabits(prev =>
-      prev.map(habit =>
-        habit.id === editData.id
-          ? { ...habit, name: editData.name, color: editData.color }
-          : habit
-      )
+      prev.map(habit => (habit.id === editData.id ? { ...habit, name: editData.name } : habit))
     );
+
+    // attempt API update
+    await updateHabitAPI(editData.id, { name: editData.name } as any);
+
     setEditingHabit(null);
   };
 
-  const deleteHabit = (habitId: string): void => {
+  const deleteHabit = async (habitId: string): Promise<void> => {
     setHabits(prev => prev.filter(habit => habit.id !== habitId));
     setShowDeleteConfirm(null);
+
+    // attempt remote delete
+    await deleteHabitAPI(habitId);
   };
 
-  const toggleHabitDay = (habitId: string, day: DayOfWeek): void => {
+  const toggleHabitDay = async (habitId: string, day: DayOfWeek): Promise<void> => {
     setHabits(prev =>
       prev.map(habit =>
         habit.id === habitId
@@ -119,6 +142,19 @@ function App() {
           : habit
       )
     );
+
+    // attempt to patch the habit remotely with completedDays
+    const habit = habits.find(h => h.id === habitId);
+    if (habit) {
+      const updated = {
+        ...habit,
+        completedDays: {
+          ...habit.completedDays,
+          [day]: !habit.completedDays[day],
+        },
+      } as any;
+      await updateHabitAPI(habitId, updated);
+    }
   };
 
   const resetAllProgress = (): void => {
@@ -168,9 +204,7 @@ function App() {
         onResetProgress={resetAllProgress}
         totalHabits={habits.length}
         completedHabits={
-          habits.filter(
-            h => Object.values(h.completedDays).filter(Boolean).length === 7
-          ).length
+          habits.filter(h => Object.values(h.completedDays).filter(Boolean).length === 7).length
         }
       />
 

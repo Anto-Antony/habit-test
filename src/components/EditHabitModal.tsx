@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import type { Habit, EditHabitData } from '../types/Habit';
-import { HABIT_COLORS } from '../constants/colors';
-import ColorPicker from './ColorPicker';
 import '../styles/components/Modal.css';
 import '../styles/components/Button.css';
 
@@ -14,7 +12,6 @@ interface EditHabitModalProps {
 
 function EditHabitModal({ habit, onSave, onClose }: EditHabitModalProps) {
   const [name, setName] = useState<string>(habit.name);
-  const [selectedColor, setSelectedColor] = useState<string>(habit.color);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent): void => {
@@ -34,7 +31,6 @@ function EditHabitModal({ habit, onSave, onClose }: EditHabitModalProps) {
       onSave({
         id: habit.id,
         name: name.trim(),
-        color: selectedColor,
       });
     }
   };
@@ -76,14 +72,7 @@ function EditHabitModal({ habit, onSave, onClose }: EditHabitModalProps) {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Choose Color</label>
-            <ColorPicker
-              colors={HABIT_COLORS}
-              selectedColor={selectedColor}
-              onColorSelect={setSelectedColor}
-            />
-          </div>
+          {/* Color picker removed */}
 
           <div className="modal-actions">
             <button

@@ -16,7 +16,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background-color: var(--habit-color);
+  background-color: var(--primary-color);
 }
 
 .habit-card:hover {
@@ -129,13 +129,13 @@
 }
 
 .day-checkbox:hover {
-  border-color: var(--habit-color);
+  border-color: var(--primary-color);
   transform: scale(1.05);
 }
 
 .day-checkbox.checked {
-  background-color: var(--habit-color);
-  border-color: var(--habit-color);
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .checkmark {

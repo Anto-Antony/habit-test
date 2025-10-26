@@ -18,6 +18,16 @@ interface HabitCardProps {
   onDelete: (habitId: string) => void;
 }
 
+const DAYS: DayOfWeek[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+];
+
 function HabitCard({ habit, onToggleDay, onEdit, onDelete }: HabitCardProps) {
   const [isHovered, setIsHovered] = useState<boolean>(false);
 
@@ -25,15 +35,14 @@ function HabitCard({ habit, onToggleDay, onEdit, onDelete }: HabitCardProps) {
   const completionPercentage = getCompletionPercentage(habit);
   const isCompleted = isHabitCompleted(habit);
   const streak = calculateStreak(habit);
-const failures = habit.failureDays ?? 0;
-const total = habit.totalDays ?? 0;
+  const failures = habit.failureDays ?? 0;
+  const total = habit.totalDays ?? 0;
 
   return (
     <div
       className="habit-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ '--habit-color': habit.color } as React.CSSProperties}
     >
       <div className="habit-header">
         <div className="habit-title">
@@ -41,19 +50,18 @@ const total = habit.totalDays ?? 0;
             {habit.name}
             {isCompleted && <span className="completion-badge">✓</span>}
           </h3>
-          
+
           <div className="habit-stats">
-  <span className="completion-text">{completedDaysCount}/7 days</span>
+            <span className="completion-text">{completedDaysCount}/7 days</span>
 
-  {/* NEW: failures/total */}
-  <span className="failure-text">
-    {failures}/{total} failed
-  </span>
+            <span className="failure-text">
+              {failures}/{total} failed
+            </span>
 
-  {streak > 0 && (
-    <span className="streak-badge">{streak} day streak</span>
-  )}
-</div>
+            {streak > 0 && (
+              <span className="streak-badge">{streak} day streak</span>
+            )}
+          </div>
 
         </div>
 
@@ -76,20 +84,22 @@ const total = habit.totalDays ?? 0;
       </div>
 
       <div className="progress-section">
-        <ProgressBar percentage={completionPercentage} color={habit.color} />
+        <ProgressBar percentage={completionPercentage} />
       </div>
 
-     {/* Single daily checkbox */}
-<div className="daily-check-container">
-  <label className="day-label">Done Today:</label>
-  <button
-    className={`day-checkbox ${habit.completedDays['monday'] ? 'checked' : ''}`}
-    onClick={() => onToggleDay(habit.id, 'monday')}
-    aria-label={`Mark as ${habit.completedDays['monday'] ? 'incomplete' : 'complete'}`}
-  >
-    {habit.completedDays['monday'] && <span className="checkmark">✓</span>}
-  </button>
-</div>
+      <div className="daily-check-grid">
+        {DAYS.map(day => (
+          <button
+            key={day}
+            className={`day-checkbox ${habit.completedDays?.[day] ? 'checked' : ''}`}
+            onClick={() => onToggleDay(habit.id, day)}
+            aria-label={`Toggle ${day}`}
+            title={day}
+          >
+            {habit.completedDays?.[day] ? '✓' : day.charAt(0).toUpperCase()}
+          </button>
+        ))}
+      </div>
 
     </div>
   );

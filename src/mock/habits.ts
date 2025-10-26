@@ -18,7 +18,6 @@ export const MOCK_HABITS: Habit[] = [
   {
     id: 'h1',
     name: 'Morning Run',
-    color: '#3B82F6',
     frequency: 'daily',
     category: 'Fitness',
     startDate: '2025-10-01',
@@ -30,7 +29,6 @@ export const MOCK_HABITS: Habit[] = [
   {
     id: 'h2',
     name: 'Read 20 mins',
-    color: '#F59E0B',
     frequency: 'daily',
     category: 'Study',
     startDate: '2025-09-20',
@@ -42,7 +40,6 @@ export const MOCK_HABITS: Habit[] = [
   {
     id: 'h3',
     name: 'Meal Prep',
-    color: '#10B981',
     frequency: 'weekly',
     category: 'Health',
     startDate: '2025-10-05',

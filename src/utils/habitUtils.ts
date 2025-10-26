@@ -1,7 +1,12 @@
-import type { Habit } from '../types/Habit';
-import type { DayOfWeek } from '../types/Habit';
+// src/utils/habitUtils.ts
+import axios from 'axios';
+import type { DayOfWeek, Habit as FrontendHabit } from '../types/Habit';
 
-export const DAYS_OF_WEEK: DayOfWeek[] = [
+// Base API URL
+const API_BASE_URL = 'https://habit-track.up.railway.app';
+
+// Helper: order of days starting Monday
+const DAYS_ORDER: DayOfWeek[] = [
   'monday',
   'tuesday',
   'wednesday',
@@ -11,151 +16,234 @@ export const DAYS_OF_WEEK: DayOfWeek[] = [
   'sunday',
 ];
 
-export const DAYS_DISPLAY_NAMES: Record<DayOfWeek, string> = {
-  monday: 'Mon',
-  tuesday: 'Tue',
-  wednesday: 'Wed',
-  thursday: 'Thu',
-  friday: 'Fri',
-  saturday: 'Sat',
-  sunday: 'Sun',
-};
+// -----------------------------
+// Mapping between API shape and frontend shape
+// API expected shape (example): { id: number, name, frequency, category, start_date }
+// Frontend shape is defined in src/types/Habit.ts (id: string, startDate, completedDays, ...)
+// -----------------------------
 
-export function generateId(): string {
-  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-}
-
-export function getCompletedDaysCount(habit: Habit): number {
-  return Object.values(habit.completedDays).filter(Boolean).length;
-}
-
-export function getCompletionPercentage(habit: Habit): number {
-  const completedCount = getCompletedDaysCount(habit);
-  return Math.round((completedCount / 7) * 100);
-}
-
-export function isHabitCompleted(habit: Habit): boolean {
-  return getCompletedDaysCount(habit) === 7;
-}
-
-export function calculateStreak(habit: Habit): number {
-  let maxStreak = 0;
-  let currentStreak = 0;
-
-  for (const day of DAYS_OF_WEEK) {
-    if (habit.completedDays[day]) {
-      currentStreak++;
-      maxStreak = Math.max(maxStreak, currentStreak);
-    } else {
-      currentStreak = 0;
-    }
-  }
-
-  return maxStreak;
-}
-
-// Added helpers to convert between app Habit and API payloads
-function capitalizeFrequency(freq: string) {
-  return freq.charAt(0).toUpperCase() + freq.slice(1);
-}
-
-function habitToApiPayload(h: Habit) {
+function mapApiToFrontend(apiHabit: any): FrontendHabit {
+  const id = apiHabit.id != null ? String(apiHabit.id) : `local-${Date.now()}`;
+  const startDate = apiHabit.start_date ?? apiHabit.startDate ?? '';
+  const completedDays = apiHabit.completedDays ?? createEmptyHabitDays();
   return {
-    name: h.name,
-    frequency: capitalizeFrequency(h.frequency),
-    category: h.category,
-    start_date: h.startDate,
+    id,
+    name: apiHabit.name || 'Untitled',
+    frequency: apiHabit.frequency || 'daily',
+    category: apiHabit.category || 'Personal',
+    startDate,
+    completedDays,
+    createdAt: apiHabit.createdAt || new Date().toISOString(),
+    totalDays: apiHabit.totalDays ?? 0,
+    failureDays: apiHabit.failureDays ?? 0,
+  } as FrontendHabit;
+}
+
+function mapFrontendToApi(habit: FrontendHabit) {
+  return {
+    id: habit.id && habit.id.startsWith('local-') ? undefined : Number(habit.id),
+    name: habit.name,
+    frequency: habit.frequency,
+    category: habit.category,
+    start_date: habit.startDate,
+    // include completedDays if backend supports it; harmless otherwise
+    completedDays: habit.completedDays,
+    totalDays: habit.totalDays ?? 0,
+    failureDays: habit.failureDays ?? 0,
   };
 }
 
-function apiToHabit(item: any): Habit {
-  return {
-    id: item.id ?? generateId(),
-    name: item.name ?? 'Untitled',
-    color: item.color ?? '#000000',
-    frequency: (typeof item.frequency === 'string' ? item.frequency.toLowerCase() : 'weekly') as any,
-    category: (item.category ?? 'Personal') as any,
-    startDate: item.start_date ?? item.startDate ?? new Date().toISOString().slice(0, 10),
-    completedDays: item.completedDays ?? createEmptyHabitDays(),
-    createdAt: item.createdAt ?? new Date().toISOString(),
-    totalDays: item.totalDays,
-    failureDays: item.failureDays,
-  };
-}
-
-export async function saveHabitsToStorage(habits: Habit[]): Promise<void> {
+// -----------------------------
+// API functions
+// -----------------------------
+export const fetchHabitsFromAPI = async (): Promise<FrontendHabit[]> => {
   try {
-    const payload = habits.map(habitToApiPayload);
-    const res = await fetch('https://habit-track.up.railway.app/habits', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      // If server returns saved items, normalise and persist to localStorage for offline use
-      try {
-        const serverData = await res.json();
-        if (Array.isArray(serverData)) {
-          localStorage.setItem('habits', JSON.stringify(serverData.map(apiToHabit)));
-        } else {
-          localStorage.setItem('habits', JSON.stringify(habits));
-        }
-      } catch {
-        localStorage.setItem('habits', JSON.stringify(habits));
-      }
-      return;
-    }
-
-    // fallback when server responds with error
-    try {
-      localStorage.setItem('habits', JSON.stringify(habits));
-    } catch (e) {
-      console.error('Failed to save habits to localStorage after API error:', e);
-    }
-  } catch (error) {
-    console.error('Failed to save habits via API, falling back to localStorage:', error);
-    try {
-      localStorage.setItem('habits', JSON.stringify(habits));
-    } catch (e) {
-      console.error('Failed to save habits to localStorage as fallback:', e);
-    }
-  }
-}
-
-export async function loadHabitsFromStorage(): Promise<Habit[]> {
-  try {
-    const res = await fetch('https://habit-track.up.railway.app/habits');
-    if (res.ok) {
-      const parsed = await res.json();
-      if (Array.isArray(parsed)) return parsed.map(apiToHabit);
-    }
-
-    // Fallback: try localStorage
-    const storedHabits = localStorage.getItem('habits');
-    if (!storedHabits) return [];
-
-    const parsedLocal = JSON.parse(storedHabits);
-    if (!Array.isArray(parsedLocal)) return [];
-
-    // Ensure each item conforms to Habit interface
-    return parsedLocal.map((item: any) =>
-      item.id && item.completedDays ? (item as Habit) : apiToHabit(item)
-    );
-  } catch (error) {
-    console.error('Failed to load habits via API/localStorage:', error);
+    const res = await axios.get(`${API_BASE_URL}/habits`);
+    if (!Array.isArray(res.data)) return [];
+    return res.data.map(mapApiToFrontend);
+  } catch (err) {
+    console.error('fetchHabitsFromAPI error:', err);
     return [];
   }
-}
+};
 
-export function createEmptyHabitDays(): Record<DayOfWeek, boolean> {
-  return {
-    monday: false,
-    tuesday: false,
-    wednesday: false,
-    thursday: false,
-    friday: false,
-    saturday: false,
-    sunday: false,
-  };
-}
+export const createHabitAPI = async (
+  habitData: Partial<FrontendHabit>
+): Promise<FrontendHabit | null> => {
+  try {
+    const payload = {
+      name: habitData.name,
+      frequency: habitData.frequency,
+      category: habitData.category,
+      start_date: habitData.startDate,
+      completedDays: habitData.completedDays,
+      totalDays: habitData.totalDays ?? 0,
+      failureDays: habitData.failureDays ?? 0,
+    };
+    const res = await axios.post(`${API_BASE_URL}/habits`, payload, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return mapApiToFrontend(res.data);
+  } catch (err) {
+    console.error('createHabitAPI error:', err);
+    return null;
+  }
+};
+
+export const updateHabitAPI = async (
+  habitId: string,
+  updates: Partial<FrontendHabit>
+): Promise<FrontendHabit | null> => {
+  try {
+    const numericId = habitId.startsWith('local-') ? undefined : Number(habitId);
+    if (numericId == null) {
+      // nothing to update on remote if local-only id
+      return null;
+    }
+    const payload = mapFrontendToApi(updates as FrontendHabit);
+    const res = await axios.put(`${API_BASE_URL}/habits/${numericId}`, payload, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return mapApiToFrontend(res.data);
+  } catch (err) {
+    console.error('updateHabitAPI error:', err);
+    return null;
+  }
+};
+
+export const deleteHabitAPI = async (habitId: string): Promise<boolean> => {
+  try {
+    const numericId = habitId.startsWith('local-') ? undefined : Number(habitId);
+    if (numericId == null) {
+      // nothing to delete on remote
+      return true;
+    }
+    await axios.delete(`${API_BASE_URL}/habits/${numericId}`);
+    return true;
+  } catch (err) {
+    console.error('deleteHabitAPI error:', err);
+    return false;
+  }
+};
+
+// -----------------------------
+// Local helpers (frontend)
+// -----------------------------
+export const generateId = (): string => `local-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+export const createEmptyHabitDays = (): Record<DayOfWeek, boolean> => ({
+  monday: false,
+  tuesday: false,
+  wednesday: false,
+  thursday: false,
+  friday: false,
+  saturday: false,
+  sunday: false,
+});
+
+export const getCompletedDaysCount = (habit: FrontendHabit): number => {
+  return Object.values(habit.completedDays || createEmptyHabitDays()).filter(Boolean).length;
+};
+
+export const getCompletionPercentage = (habit: FrontendHabit): number => {
+  const total = 7;
+  const completed = getCompletedDaysCount(habit);
+  return Math.round((completed / total) * 100);
+};
+
+export const isHabitCompleted = (habit: FrontendHabit): boolean => getCompletedDaysCount(habit) === 7;
+
+// Calculate a simple streak: number of consecutive days completed up to today (checks backwards from today)
+export const calculateStreak = (habit: FrontendHabit): number => {
+  const todayIdx = new Date().getDay(); // 0 = Sunday
+  // convert to index where 0 = monday
+  const indexMap = [6, 0, 1, 2, 3, 4, 5]; // maps Date.getDay() to our DAYS_ORDER index (0=monday)
+  const startIdx = indexMap[todayIdx];
+
+  let streak = 0;
+  for (let i = 0; i < 7; i++) {
+    const idx = (startIdx - i + 7) % 7;
+    const day = DAYS_ORDER[idx];
+    if (habit.completedDays && habit.completedDays[day]) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+  return streak;
+};
+
+// -----------------------------
+// Storage helpers used by the app (kept for compatibility)
+// loadHabitsFromStorage: attempts API first, falls back to localStorage or empty array
+// saveHabitsToStorage: persists to localStorage and attempts to sync new local items to the API
+// -----------------------------
+export const loadHabitsFromStorage = async (): Promise<FrontendHabit[]> => {
+  try {
+    const apiHabits = await fetchHabitsFromAPI();
+    if (apiHabits && apiHabits.length) return apiHabits;
+  } catch (err) {
+    // ignored - handled below
+  }
+
+  // fallback to localStorage
+  try {
+    const raw = localStorage.getItem('habits');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as FrontendHabit[];
+    return parsed.map(h => ({ ...h, completedDays: h.completedDays ?? createEmptyHabitDays() }));
+  } catch (err) {
+    console.error('loadHabitsFromStorage fallback error:', err);
+    return [];
+  }
+};
+
+export const saveHabitsToStorage = async (habits: FrontendHabit[]): Promise<void> => {
+  try {
+    // save to localStorage for offline UX
+    localStorage.setItem('habits', JSON.stringify(habits));
+
+    // attempt to sync local-only items to API
+    for (const h of habits) {
+      if (h.id && h.id.startsWith('local-')) {
+        try {
+          const created = await createHabitAPI(h as FrontendHabit);
+          if (created) {
+            // replace local id with server id in stored list
+            const idx = habits.findIndex(x => x.id === h.id);
+            if (idx !== -1) {
+              habits[idx] = created;
+              localStorage.setItem('habits', JSON.stringify(habits));
+            }
+          }
+        } catch (err) {
+          // ignore per-item sync failures
+        }
+      } else {
+        // try updating remote for non-local ids
+        try {
+          await updateHabitAPI(h.id, h as FrontendHabit);
+        } catch (err) {
+          // ignore
+        }
+      }
+    }
+  } catch (err) {
+    console.error('saveHabitsToStorage error:', err);
+  }
+};
+
+export default {
+  fetchHabitsFromAPI,
+  createHabitAPI,
+  updateHabitAPI,
+  deleteHabitAPI,
+  generateId,
+  createEmptyHabitDays,
+  getCompletedDaysCount,
+  getCompletionPercentage,
+  isHabitCompleted,
+  calculateStreak,
+  loadHabitsFromStorage,
+  saveHabitsToStorage,
+};

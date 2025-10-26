@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { FormEvent } from 'react';
 import type { HabitFormData } from '../types/Habit'; // extend with: frequency, category, startDate
-import { HABIT_COLORS } from '../constants/colors';
-import ColorPicker from './ColorPicker';
 import '../styles/components/AddHabitForm.css';
 import '../styles/components/Button.css';
 
@@ -17,7 +15,6 @@ interface AddHabitFormProps {
 
 function AddHabitForm({ onAddHabit }: AddHabitFormProps) {
   const [name, setName] = useState<string>('');
-  const [selectedColor, setSelectedColor] = useState<string>(HABIT_COLORS[0]);
 
   // NEW modal state
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -29,7 +26,6 @@ function AddHabitForm({ onAddHabit }: AddHabitFormProps) {
 
   const resetForm = () => {
     setName('');
-    setSelectedColor(HABIT_COLORS[0]);
     setFrequency('daily');
     setCategory(CATEGORIES[0]);
     setStartDate(new Date().toISOString().slice(0, 10));
@@ -41,7 +37,6 @@ function AddHabitForm({ onAddHabit }: AddHabitFormProps) {
 
     const payload = {
       name: name.trim(),
-      color: selectedColor,
       frequency,
       category,
       startDate, // string: YYYY-MM-DD
@@ -169,15 +164,7 @@ function AddHabitForm({ onAddHabit }: AddHabitFormProps) {
             />
           </div>
 
-          {/* Color */}
-          <div className="form-group">
-            <label className="form-label">Choose Color</label>
-            <ColorPicker
-              colors={HABIT_COLORS}
-              selectedColor={selectedColor}
-              onColorSelect={setSelectedColor}
-            />
-          </div>
+          {/* Color removed — using theme default colors */}
 
           <div className="habit-modal-actions">
             <button

@@ -17,8 +17,6 @@ export type SortType   = 'name' | 'streak' | 'created';
 
 export interface HabitFormData {
   name: string;
-  color: string;
-  // NEW:
   frequency: Frequency;
   category: Category;
   startDate: string;   // YYYY-MM-DD
@@ -30,8 +28,6 @@ export interface Habit extends HabitFormData {
   id: string;
   completedDays: Record<DayOfWeek, boolean>;
   createdAt: string;
-
-  // Optional stats used by mock data
   totalDays?: number;
   failureDays?: number;
 }
@@ -39,5 +35,4 @@ export interface Habit extends HabitFormData {
 export interface EditHabitData {
   id: string;
   name: string;
-  color: string;
 }
